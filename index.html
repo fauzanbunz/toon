@@ -1,1 +1,426 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Slap Interaktif</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
 
+        body {
+            font-family: 'Fredoka One', cursive;
+            background-color: blue; /* Mengubah warna background dasar menjadi biru */
+            overflow: hidden;
+        }
+
+        /* Gaya untuk layar transisi */
+        .screen {
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.9);
+            z-index: -1;
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+            z-index: 10;
+        }
+
+        /* Animasi tombol Start */
+        .btn-start {
+            background: linear-gradient(45deg, #ff4081, #ff80ab);
+            box-shadow: 0 6px 0 #c51162, 0 10px 20px rgba(0,0,0,0.2);
+            transition: all 0.1s;
+        }
+        
+        .btn-start:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 #c51162, 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        /* Container Karakter */
+        .character-container {
+            position: relative;
+            cursor: pointer;
+            width: 100%;
+            max-width: 500px; /* Batasi lebar maksimal */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Efek saat diklik */
+            transition: transform 0.05s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+        }
+
+        .character-container:active {
+            transform: scale(0.95) rotate(-3deg);
+        }
+
+        /* Gambar Karakter */
+        .character-image {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            display: block;
+        }
+
+        /* Animasi Slap Mark (Bekas Tangan) */
+        .slap-mark {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background-image: url('https://raw.githubusercontent.com/fauzanbunz/toon/main/slap.svg');
+            background-size: contain;
+            background-repeat: no-repeat;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.5) rotate(-20deg);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 5;
+        }
+
+        .slapped .slap-mark {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+        }
+
+        /* Efek getar untuk seluruh kontainer game saat ditampar */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        .shake-animation {
+            animation: shake 0.3s;
+            animation-iteration-count: 1;
+        }
+
+        /* Partikel tamparan (opsional untuk efek ekstra) */
+        .particle {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        /* Score dan UI */
+        .score-board {
+            background: white;
+            border: 4px solid #333;
+            border-radius: 20px;
+            padding: 10px 30px;
+            box-shadow: 0 4px 0 #ccc;
+        }
+
+        /* Background Game */
+        #game-screen {
+            background-image: url('https://raw.githubusercontent.com/fauzanbunz/toon/main/ssssss.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Background Landing Page */
+        #landing-screen {
+            background-image: url('https://raw.githubusercontent.com/fauzanbunz/toon/main/ssssss.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+
+    </style>
+</head>
+<body class="text-gray-800 antialiased h-screen w-screen relative">
+
+    <!-- LANDING PAGE -->
+    <div id="landing-screen" class="screen active">
+        <div class="text-center p-8 md:p-12 max-w-md w-11/12">
+            <img id="start-btn" src="https://raw.githubusercontent.com/fauzanbunz/toon/main/dfdgdggd.png" alt="Slap Game Title" class="w-full max-w-[320px] mx-auto drop-shadow-2xl hover:scale-110 transition-transform cursor-pointer" title="Klik untuk Mulai!">
+        </div>
+    </div>
+
+    <!-- GAME AREA -->
+    <div id="game-screen" class="screen hidden">
+        
+        <!-- Header Game (Skor & Waktu) -->
+        <div class="absolute top-5 w-full px-5 flex justify-between items-center max-w-2xl mx-auto z-20">
+            <div class="score-board text-center">
+                <p class="text-sm text-gray-500 uppercase tracking-wider">Slaps</p>
+                <p id="score-display" class="text-4xl text-pink-500 font-bold leading-none">0</p>
+            </div>
+            
+            <!-- Tombol Kembali -->
+            <button id="back-btn" class="bg-white border-4 border-gray-800 p-3 rounded-full shadow-[4px_4px_0px_rgba(0,0,0,0.2)] hover:bg-gray-100 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="text-center mt-16 mb-4 z-20">
+            <h2 id="feedback-text" class="text-3xl font-bold text-gray-800 h-10 drop-shadow-sm opacity-0 transition-opacity">Ayo Tampar!</h2>
+        </div>
+
+        <!-- Karakter Interaktif (Berbasis Gambar) -->
+        <div id="character" class="character-container z-10">
+            <img id="char-image" src="https://raw.githubusercontent.com/fauzanbunz/toon/main/toon1.png" alt="Character" class="character-image" draggable="false">
+            <!-- Markah tamparan yang muncul (hidden secara default) -->
+            <div id="slap-mark" class="slap-mark"></div>
+        </div>
+        
+        <!-- Partikel Container -->
+        <div id="particles-container" class="absolute inset-0 pointer-events-none z-30 overflow-hidden"></div>
+
+        <div class="absolute bottom-5 text-gray-500 font-bold opacity-50 z-0">
+            Tap the character!
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const landingScreen = document.getElementById('landing-screen');
+            const gameScreen = document.getElementById('game-screen');
+            const startBtn = document.getElementById('start-btn');
+            const backBtn = document.getElementById('back-btn');
+            
+            const character = document.getElementById('character');
+            const charImage = document.getElementById('char-image');
+            const slapMark = document.getElementById('slap-mark');
+            const scoreDisplay = document.getElementById('score-display');
+            const feedbackText = document.getElementById('feedback-text');
+            const particlesContainer = document.getElementById('particles-container');
+
+            let score = 0;
+            let resetTimeout;
+
+            // URL Gambar & Suara
+            const imageNormal = "https://raw.githubusercontent.com/fauzanbunz/toon/main/toon1.png";
+            const imageSlapped = "https://raw.githubusercontent.com/fauzanbunz/toon/main/toon2.png";
+            const imageSlappedLevel2 = "https://raw.githubusercontent.com/fauzanbunz/toon/main/toon3.png";
+            const imageSplash = "https://raw.githubusercontent.com/fauzanbunz/toon/main/cccc.png";
+            const soundSlap = "https://raw.githubusercontent.com/fauzanbunz/toon/main/newsound.mp3";
+
+            function showGameScreen() {
+                landingScreen.classList.remove('active');
+                landingScreen.classList.add('hidden');
+                
+                setTimeout(() => {
+                    gameScreen.classList.remove('hidden');
+                    gameScreen.classList.add('active');
+                    resetGame();
+                }, 100);
+            }
+
+            function showLandingScreen() {
+                gameScreen.classList.remove('active');
+                gameScreen.classList.add('hidden');
+                
+                setTimeout(() => {
+                    landingScreen.classList.remove('hidden');
+                    landingScreen.classList.add('active');
+                }, 100);
+            }
+
+            function resetGame() {
+                score = 0;
+                updateScore();
+                resetCharacterExpression();
+                feedbackText.style.opacity = 0;
+            }
+
+            function updateScore() {
+                scoreDisplay.textContent = score;
+                scoreDisplay.style.transform = 'scale(1.3)';
+                setTimeout(() => {
+                    scoreDisplay.style.transform = 'scale(1)';
+                }, 100);
+            }
+
+            function showFeedback() {
+                const feedbacks = ["OUCH!", "YIKES!", "BAM!", "PLAK!", "ADUH!", "SADIS!"];
+                feedbackText.textContent = feedbacks[Math.floor(Math.random() * feedbacks.length)];
+                feedbackText.style.opacity = 1;
+                feedbackText.style.transform = `scale(${1 + (Math.random() * 0.5)}) rotate(${(Math.random() - 0.5) * 20}deg)`;
+                feedbackText.style.color = Math.random() > 0.5 ? '#e91e63' : '#ff5722';
+            }
+
+            // Fungsi baru untuk membuat efek merah pada pantat/area klik
+            function createRedness(x, y) {
+                const redness = document.createElement('div');
+                redness.style.position = 'absolute';
+                redness.style.width = '180px';
+                redness.style.height = '180px';
+                redness.style.left = `${x}px`;
+                redness.style.top = `${y}px`;
+                // Gradasi merah radial yang transparan
+                redness.style.background = 'radial-gradient(circle, rgba(255, 0, 0, 0.6) 0%, rgba(255, 0, 0, 0) 70%)';
+                redness.style.borderRadius = '50%';
+                redness.style.pointerEvents = 'none'; // Agar tidak menghalangi klik berikutnya
+                redness.style.zIndex = '4'; // Berada di atas gambar, tapi di bawah ikon tangan
+                redness.style.transform = 'translate(-50%, -50%)'; // Posisikan persis di tengah titik klik
+                
+                character.appendChild(redness);
+                
+                // Animasi memudar perlahan selama 3 detik (3000 milidetik)
+                redness.animate([
+                    { opacity: 1 },
+                    { opacity: 0 }
+                ], {
+                    duration: 3000,
+                    easing: 'ease-out'
+                }).onfinish = () => redness.remove(); // Hapus elemen dari DOM setelah animasi selesai
+            }
+
+            function createParticles(x, y) {
+                for (let i = 0; i < 5; i++) {
+                    const particle = document.createElement('div');
+                    particle.classList.add('particle');
+                    
+                    const size = Math.random() * 10 + 5;
+                    particle.style.width = `${size}px`;
+                    particle.style.height = `${size}px`;
+                    
+                    particle.style.left = `${x}px`;
+                    particle.style.top = `${y}px`;
+                    
+                    particlesContainer.appendChild(particle);
+                    
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = Math.random() * 100 + 50;
+                    const duration = Math.random() * 300 + 200;
+                    
+                    particle.animate([
+                        { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+                        { transform: `translate(calc(-50% + ${Math.cos(angle) * distance}px), calc(-50% + ${Math.sin(angle) * distance}px)) scale(0)`, opacity: 0 }
+                    ], {
+                        duration: duration,
+                        easing: 'cubic-bezier(0, .9, .57, 1)'
+                    }).onfinish = () => particle.remove();
+                }
+            }
+
+            function resetCharacterExpression() {
+                // Kembalikan gambar ke kondisi normal
+                charImage.src = imageNormal;
+                character.classList.remove('slapped');
+                feedbackText.style.opacity = 0;
+            }
+
+            // Fungsi efek muncrat saat skor 20
+            function createSplashEffect() {
+                const splash = document.createElement('img');
+                splash.src = imageSplash;
+                splash.style.position = 'fixed';
+                splash.style.top = '0';
+                splash.style.left = '0';
+                splash.style.width = '100vw'; // Memenuhi lebar layar
+                splash.style.height = '100vh'; // Memenuhi tinggi layar
+                splash.style.objectFit = 'cover'; // Pastikan gambar meng-cover seluruh area tanpa celah
+                splash.style.pointerEvents = 'none';
+                splash.style.zIndex = '50'; // Pastikan berada di atas semua elemen
+                
+                document.body.appendChild(splash); // Masukkan ke dalam body
+                
+                // Animasi meluncur dari bawah ke tengah, lalu memudar perlahan
+                splash.animate([
+                    { transform: 'translateY(100vh)', opacity: 1, offset: 0 },    // 0%: Mulai dari bawah layar
+                    { transform: 'translateY(0)', opacity: 1, offset: 0.3 },      // 30%: Tiba di tengah layar dengan jelas
+                    { transform: 'translateY(0)', opacity: 0, offset: 1 }         // 100%: Memudar perlahan dan hilang
+                ], {
+                    duration: 3000, // 3 detik total (agar efek memudarnya terasa perlahan)
+                    easing: 'ease-out'
+                }).onfinish = () => splash.remove();
+            }
+
+            function handleSlap(e) {
+                if (e.type === 'touchstart') {
+                    e.preventDefault();
+                }
+
+                // Mainkan efek suara slap
+                const audio = new Audio(soundSlap);
+                audio.play().catch(err => console.log("Audio tertahan oleh browser:", err));
+
+                score++;
+                updateScore();
+                showFeedback();
+
+                // Ubah gambar karakter (Ekspresi level 2 jika skor 20 s/d 29, kembali ke level 1 jika >= 30)
+                if (score >= 20 && score < 30) {
+                    charImage.src = imageSlappedLevel2;
+                } else {
+                    charImage.src = imageSlapped;
+                }
+                character.classList.add('slapped');
+
+                // Efek muncrat muncul setiap kelipatan 20 tamparan (20, 40, 60, dst)
+                if (score > 0 && score % 20 === 0) {
+                    createSplashEffect();
+                }
+
+                let relativeX, relativeY;
+                
+                if (e.touches && e.touches.length > 0) {
+                    const rect = character.getBoundingClientRect();
+                    relativeX = e.touches[0].clientX - rect.left;
+                    relativeY = e.touches[0].clientY - rect.top;
+                    createParticles(e.touches[0].clientX, e.touches[0].clientY);
+                } else {
+                    relativeX = e.offsetX;
+                    relativeY = e.offsetY;
+                    createParticles(e.clientX, e.clientY);
+                }
+
+                // Panggil efek bercak merah di titik koordinat klik
+                createRedness(relativeX, relativeY);
+
+                const markX = Math.max(0, Math.min(relativeX - 40, character.offsetWidth - 80)) + (Math.random() * 20 - 10);
+                const markY = Math.max(0, Math.min(relativeY - 40, character.offsetHeight - 80)) + (Math.random() * 20 - 10);
+                
+                slapMark.style.left = `${markX}px`;
+                slapMark.style.top = `${markY}px`;
+                
+                const rotate = Math.random() * 60 - 30;
+                slapMark.style.transform = `scale(1) rotate(${rotate}deg)`;
+
+                gameScreen.classList.remove('shake-animation');
+                void gameScreen.offsetWidth; 
+                gameScreen.classList.add('shake-animation');
+
+                clearTimeout(resetTimeout);
+                resetTimeout = setTimeout(resetCharacterExpression, 800);
+            }
+
+            startBtn.addEventListener('click', showGameScreen);
+            backBtn.addEventListener('click', showLandingScreen);
+
+            // Pasang event listener ke kontainer karakter
+            character.addEventListener('mousedown', handleSlap);
+            character.addEventListener('touchstart', handleSlap, {passive: false});
+        });
+    </script>
+</body>
+</html>
